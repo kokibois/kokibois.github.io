@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Camera App with Filters</title>
+    <style>
+        /* ここに style.css の内容を貼り付け */
+        :root {
+            --primary-color: #6a11cb;
+            --secondary-color: #2575fc;
+            --text-color: #333;
+            --bg-color: #f4f7f6;
+            --card-bg-color: #ffffff;
+            --border-radius: 12px;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-container {
+            background: var(--card-bg-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .camera-section {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto 20px;
+            background: #000;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            aspect-ratio: 4 / 3;
+        }
+
+        #video, #canvas, .placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .placeholder {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #222;
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+
+        .controls-section {
+            text-align: center;
+        }
+
+        .controls-top {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .camera-switcher-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .camera-switcher-wrapper label {
+            font-weight: 600;
+        }
+
+        .camera-switcher {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: var(--font-family);
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .camera-switcher:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        .filter-controls h3 {
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f8ff;
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .result-section {
+            margin-top: 30px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .result-section h3 {
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        #photo {
+            max-width: 100%;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .result-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .app-container {
+                border-radius: 0;
+                height: 100vh;
+                max-width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            main {
+                flex-grow: 1;
+                overflow-y: auto;
+            }
+            
+            header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .controls-top {
+                flex-direction: column;
+            }
+            
+            .filter-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>Web Camera Filters</h1>
+        </header>
+
+        <main>
+            <section class="camera-section">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <div id="placeholder" class="placeholder">
+                    <p>「カメラを起動」をクリックして始めましょう</p>
+                </div>
+            </section>
+
+            <section class="controls-section">
+                <div class="controls-top">
+                    <button id="startBtn" class="btn btn-primary">カメラを起動</button>
+                    <button id="captureBtn" class="btn btn-success" disabled>撮影</button>
+                    <div class="camera-switcher-wrapper">
+                        <label for="cameraSwitcher">カメラ:</label>
+                        <select id="cameraSwitcher" class="camera-switcher" disabled>
+                            <option value="">--</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-controls">
+                    <h3>フィルターを選択</h3>
+                    <div class="filter-grid">
+                        <button class="filter-btn active" data-filter="none">Normal</button>
+                        <button class="filter-btn" data-filter="grayscale(100%)">Grayscale</button>
+                        <button class="filter-btn" data-filter="sepia(100%)">Sepia</button>
+                        <button class="filter-btn" data-filter="invert(100%)">Invert</button>
+                        <button class="filter-btn" data-filter="blur(5px)">Blur</button>
+                        <button class="filter-btn" data-filter="brightness(1.5)">Brightness</button>
+                        <button class="filter-btn" data-filter="contrast(2)">Contrast</button>
+                        <button class="filter-btn" data-filter="hue-rotate(90deg)">Hue Rotate</button>
+                        <button class="filter-btn" data-filter="saturate(3)">Saturate</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="resultSection" class="result-section" style="display: none;">
+                <h3>撮影結果</h3>
+                <img id="photo" alt="Captured photo">
+                <div class="result-controls">
+                    <a id="downloadBtn" class="btn btn-primary" download="photo.png">ダウンロード (PNG)</a>
+                    <button id="retakeBtn" class="btn btn-secondary">撮り直す</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // ここに script.js の内容を貼り付け
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            const startBtn = document.getElementById('startBtn');
+            const captureBtn = document.getElementById('captureBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const retakeBtn = document.getElementById('retakeBtn');
+            const photo = document.getElementById('photo');
+            const resultSection = document.getElementById('resultSection');
+            const placeholder = document.getElementById('placeholder');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const cameraSwitcher = document.getElementById('cameraSwitcher');
+
+            let stream = null;
+            let currentFilter = 'none';
+
+            const getCameraDevices = async () => {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    
+                    cameraSwitcher.innerHTML = '';
+
+                    if (videoDevices.length > 1) {
+                        videoDevices.forEach(device => {
+                            const option = document.createElement('option');
+                            option.value = device.deviceId;
+                            option.text = device.label || `Camera ${cameraSwitcher.length + 1}`;
+                            cameraSwitcher.appendChild(option);
+                        });
+                        cameraSwitcher.disabled = false;
+                    } else {
+                        cameraSwitcher.disabled = true;
+                    }
+                } catch (err) {
+                    console.error('デバイスの列挙に失敗しました:', err);
+                }
+            };
+
+            const startCamera = async (deviceId = null) => {
+                try {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+
+                    const constraints = {
+                        video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }
+                    };
+                    
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    startBtn.textContent = 'カメラを停止';
+                    startBtn.onclick = stopCamera;
+                    captureBtn.disabled = false;
+
+                    await getCameraDevices();
+                    if (stream) {
+                        const currentDevice = stream.getVideoTracks()[0];
+                        if (currentDevice) {
+                            cameraSwitcher.value = currentDevice.getSettings().deviceId;
+                        }
+                    }
+
+                } catch (err) {
+                    console.error('カメラへのアクセスに失敗しました:', err);
+                    placeholder.innerHTML = '<p style="color: red;">カメラへのアクセスを許可するか、カメラが接続されているか確認してください。</p>';
+                }
+            };
+
+            const stopCamera = () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    stream = null;
+                }
+                video.style.display = 'none';
+                placeholder.style.display = 'flex';
+                startBtn.textContent = 'カメラを起動';
+                startBtn.onclick = () => startCamera();
+                captureBtn.disabled = true;
+                cameraSwitcher.disabled = true;
+            };
+
+            const applyFilter = (filterValue) => {
+                currentFilter = filterValue;
+                video.style.filter = currentFilter;
+                
+                filterBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.filter === filterValue) {
+                        btn.classList.add('active');
+                    }
+                });
+            };
+
+            const capturePhoto = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                context.filter = currentFilter;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const imageDataUrl = canvas.toDataURL('image/png');
+                photo.src = imageDataUrl;
+                downloadBtn.href = imageDataUrl;
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                downloadBtn.download = `photo_${timestamp}.png`;
+
+                resultSection.style.display = 'block';
+                captureBtn.disabled = true;
+            };
+
+            const retakePhoto = () => {
+                resultSection.style.display = 'none';
+                photo.src = '';
+                captureBtn.disabled = false;
+            };
+
+            startBtn.addEventListener('click', () => startCamera());
+            captureBtn.addEventListener('click', capturePhoto);
+            retakeBtn.addEventListener('click', retakePhoto);
+
+            cameraSwitcher.addEventListener('change', (event) => {
+                const selectedDeviceId = event.target.value;
+                if (selectedDeviceId) {
+                    startCamera(selectedDeviceId);
+                }
+            });
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    applyFilter(btn.dataset.filter);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
